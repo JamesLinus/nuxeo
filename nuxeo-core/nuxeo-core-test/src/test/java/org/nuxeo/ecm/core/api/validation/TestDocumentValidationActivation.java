@@ -20,6 +20,7 @@
 package org.nuxeo.ecm.core.api.validation;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import javax.inject.Inject;
 
@@ -30,6 +31,9 @@ import org.nuxeo.ecm.core.api.CoreSession;
 import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.impl.DocumentModelImpl;
 import org.nuxeo.ecm.core.api.validation.DocumentValidationService.Forcing;
+import org.nuxeo.ecm.core.event.Event;
+import org.nuxeo.ecm.core.event.EventListener;
+import org.nuxeo.ecm.core.event.impl.DocumentEventContext;
 import org.nuxeo.ecm.core.test.CoreFeature;
 import org.nuxeo.ecm.core.test.annotations.Granularity;
 import org.nuxeo.ecm.core.test.annotations.RepositoryConfig;
@@ -107,6 +111,16 @@ public class TestDocumentValidationActivation {
         doc = session.createDocument(doc);
     }
 
+    // NXP-23256
+    @Test
+    @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-validation-activation-after-listener-contrib.xml")
+    public void testOnCreateDocumentActivationAfterListeners() {
+        DocumentModel doc;
+        doc = session.createDocumentModel("/", "doc1", "ValidatedUserGroup");
+        doc.setPropertyValue(SIMPLE_FIELD, INVALID);
+        doc = session.createDocument(doc);
+    }
+
     @Test
     public void testOnSaveDocumentActivationWithoutViolation() {
         DocumentModel doc;
@@ -163,6 +177,17 @@ public class TestDocumentValidationActivation {
         doc = session.saveDocument(doc);
     }
 
+    // NXP-23256
+    @Test
+    @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-validation-activation-after-listener-contrib.xml")
+    public void testOnSaveDocumentActivationAfterListeners() {
+        DocumentModel doc;
+        doc = session.createDocumentModel("/", "doc1", "ValidatedUserGroup");
+        doc = session.createDocument(doc);
+        doc.setPropertyValue(SIMPLE_FIELD, INVALID);
+        doc = session.saveDocument(doc);
+    }
+
     @Test
     public void testOnImportDocumentActivationWithoutViolation() {
         DocumentModel doc = new DocumentModelImpl(null, "ValidatedUserGroup", "12345", new Path("doc1"), null, null,
@@ -204,6 +229,27 @@ public class TestDocumentValidationActivation {
         doc.setPropertyValue(SIMPLE_FIELD, INVALID);
         doc.putContextData(DocumentValidationService.CTX_MAP_KEY, Forcing.USUAL);
         session.importDocuments(Arrays.asList(doc));
+    }
+
+    // NXP-23256
+    @Test
+    @Deploy("org.nuxeo.ecm.core.test.tests:OSGI-INF/test-validation-activation-after-listener-contrib.xml")
+    public void testOnImportDocumentActivationAfterListeners() {
+        DocumentModel doc = new DocumentModelImpl(null, "ValidatedUserGroup", "12345", new Path("doc1"), null, null,
+                                                  null, null, null, null, null);
+        doc.setPropertyValue(SIMPLE_FIELD, INVALID);
+        session.importDocuments(Collections.singletonList(doc));
+    }
+
+    public static class MakeItValidListener implements EventListener {
+
+        @Override
+        public void handleEvent(Event event) {
+            DocumentEventContext context = (DocumentEventContext) event.getContext();
+            DocumentModel doc = context.getSourceDocument();
+            doc.setPropertyValue(SIMPLE_FIELD, VALID);
+        }
+
     }
 
 }
