@@ -130,7 +130,7 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
 
     protected Long pos;
 
-    protected Map<String, DataModel> dataModels;
+    protected Map<String, DataModel> dataModels = new HashMap<>();
 
     protected DocumentRef parentRef;
 
@@ -207,11 +207,7 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
      * It must at least contain the type.
      */
     public DocumentModelImpl(String typeName) {
-        SchemaManager schemaManager = Framework.getLocalService(SchemaManager.class);
-        if (schemaManager == null) {
-            throw new NullPointerException("No registered SchemaManager");
-        }
-        type = schemaManager.getDocumentType(typeName);
+        this.type = getSchemaManager().getDocumentType(typeName);
         this.typeName = typeName;
         dataModels = new HashMap<>();
         instanceFacets = new HashSet<>();
@@ -226,15 +222,15 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
      * <p>
      * A client constructed data model must contain at least the path and the type.
      */
-    public DocumentModelImpl(String parentPath, String name, String type) {
-        this(type);
+    public DocumentModelImpl(String parentPath, String name, String typeName) {
+        this.type = getSchemaManager().getDocumentType(typeName);
+        this.typeName = typeName;
         String fullPath = parentPath == null ? name : parentPath + (parentPath.endsWith("/") ? "" : "/") + name;
         path = new Path(fullPath);
         ref = new PathRef(fullPath);
         instanceFacets = new HashSet<>();
         instanceFacetsOrig = new HashSet<>();
         facets = new HashSet<>();
-        schemas = new HashSet<>();
         if (getDocumentType() != null) {
             facets.addAll(getDocumentType().getFacets());
         }
@@ -250,14 +246,16 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
      * @param facets the per-instance facets
      */
     // TODO check if we use it
-    public DocumentModelImpl(String sid, String type, String id, Path path, Lock lock, DocumentRef docRef,
+    public DocumentModelImpl(String sid, String typeName, String id, Path path, Lock lock, DocumentRef docRef,
             DocumentRef parentRef, String[] schemas, Set<String> facets, String sourceId, String repositoryName) {
-        this(sid, type, id, path, docRef, parentRef, schemas, facets, sourceId, repositoryName, false);
+        this(sid, typeName, id, path, docRef, parentRef, schemas, facets, sourceId, repositoryName, false);
     }
 
-    public DocumentModelImpl(String sid, String type, String id, Path path, DocumentRef docRef, DocumentRef parentRef,
-            String[] schemas, Set<String> facets, String sourceId, String repositoryName, boolean isProxy) {
-        this(type);
+    public DocumentModelImpl(String sid, String typeName, String id, Path path, DocumentRef docRef,
+            DocumentRef parentRef, String[] schemas, Set<String> facets, String sourceId, String repositoryName,
+            boolean isProxy) {
+        this.type = getSchemaManager().getDocumentType(typeName);
+        this.typeName = typeName;
         this.sid = sid;
         this.id = id;
         this.path = path;
@@ -288,7 +286,7 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
         if (type != null) {
             schemas.addAll(Arrays.asList(type.getSchemaNames()));
         }
-        TypeProvider typeProvider = Framework.getLocalService(SchemaManager.class);
+        TypeProvider typeProvider = getSchemaManager();
         for (String facet : instanceFacets) {
             CompositeType facetType = typeProvider.getFacet(facet);
             if (facetType != null) { // ignore pseudo-facets like Immutable
@@ -441,7 +439,7 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
             return null;
         }
         // load from session
-        TypeProvider typeProvider = Framework.getLocalService(SchemaManager.class);
+        TypeProvider typeProvider = getSchemaManager();
         final Schema schemaType = typeProvider.getSchema(schema);
         DataModel dataModel = getSession().getDataModel(ref, schemaType);
         dataModels.put(schema, dataModel);
@@ -508,7 +506,7 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
         if (facets.contains(facet)) {
             return false;
         }
-        TypeProvider typeProvider = Framework.getLocalService(SchemaManager.class);
+        TypeProvider typeProvider = getSchemaManager();
         CompositeType facetType = typeProvider.getFacet(facet);
         if (facetType == null) {
             throw new IllegalArgumentException("No such facet: " + facet);
@@ -1104,7 +1102,7 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
     }
 
     public DataModel cloneDataModel(DataModel data) {
-        TypeProvider typeProvider = Framework.getLocalService(SchemaManager.class);
+        TypeProvider typeProvider = getSchemaManager();
         return cloneDataModel(typeProvider.getSchema(data.getSchema()), data);
     }
 
@@ -1276,7 +1274,7 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
     }
 
     public static String getXPathSchemaName(String xpath, Set<String> docSchemas, String[] returnName) {
-        SchemaManager schemaManager = Framework.getLocalService(SchemaManager.class);
+        SchemaManager schemaManager = getSchemaManager();
         // find first segment
         int i = xpath.indexOf('/');
         String prop = i == -1 ? xpath : xpath.substring(0, i);
@@ -1584,6 +1582,18 @@ public class DocumentModelImpl implements DocumentModel, Cloneable {
     private void writeObject(ObjectOutputStream stream) throws IOException {
         detach(ref != null && hasSession() && getSession().exists(ref));
         stream.defaultWriteObject();
+    }
+
+    /**
+     * @return {@link SchemaManager} service or throws an exception if no one is available
+     * @since 9.3
+     */
+    protected static SchemaManager getSchemaManager() {
+        SchemaManager schemaManager = Framework.getLocalService(SchemaManager.class);
+        if (schemaManager == null) {
+            throw new NullPointerException("No registered SchemaManager");
+        }
+        return schemaManager;
     }
 
 }

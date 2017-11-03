@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.jboss.el.ExpressionFactoryImpl;
 import org.nuxeo.ecm.core.api.DocumentModel;
-import org.nuxeo.ecm.core.api.impl.DocumentModelImpl;
+import org.nuxeo.ecm.core.api.impl.SimpleDocumentModel;
 import org.nuxeo.ecm.platform.el.ExpressionContext;
 import org.nuxeo.ecm.platform.el.ExpressionEvaluator;
 import org.nuxeo.ecm.platform.shibboleth.ShibbolethConstants;
@@ -59,7 +59,7 @@ public class ELGroupComputerHelper {
         }
 
         try {
-            ee.bindValue(ec, ShibbolethConstants.EL_CURRENT_USER_NAME, new DocumentModelImpl("user"));
+            ee.bindValue(ec, ShibbolethConstants.EL_CURRENT_USER_NAME, new SimpleDocumentModel("user"));
             ee.evaluateExpression(ec, "${" + el + "}", Boolean.class);
         } catch (PropertyNotFoundException e) {
             return false;

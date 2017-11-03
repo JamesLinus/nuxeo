@@ -41,7 +41,7 @@ import org.nuxeo.ecm.core.api.DocumentModel;
 import org.nuxeo.ecm.core.api.DocumentModelList;
 import org.nuxeo.ecm.core.api.NuxeoException;
 import org.nuxeo.ecm.core.api.PropertyException;
-import org.nuxeo.ecm.core.api.impl.DocumentModelImpl;
+import org.nuxeo.ecm.core.api.impl.SimpleDocumentModel;
 import org.nuxeo.ecm.core.schema.SchemaManager;
 import org.nuxeo.ecm.core.schema.types.Schema;
 import org.nuxeo.ecm.directory.DirectoryException;
@@ -151,7 +151,7 @@ public class DirectoryTreeNode {
         }
         // raise this event in order to reset the documents lists from
         // 'conversationDocumentsListsManager'
-        Events.instance().raiseEvent(EventNames.FOLDERISHDOCUMENT_SELECTION_CHANGED, new DocumentModelImpl("Folder"));
+        Events.instance().raiseEvent(EventNames.FOLDERISHDOCUMENT_SELECTION_CHANGED, new SimpleDocumentModel("folder"));
         pathProcessing();
         return config.getOutcome();
     }
